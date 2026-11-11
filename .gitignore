@@ -1,0 +1,9 @@
+# Keep personal task backups and local configuration out of Git.
+.env
+.env.*
+!.env.example
+*.backup.json
+max-note-backup-*.json
+.DS_Store
+node_modules/
+.vercel/
