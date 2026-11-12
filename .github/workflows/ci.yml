@@ -23,3 +23,5 @@ jobs:
           node --check appearance.js
           node --check test.js
           node test.js
+          node --check scripts/check-agent-kit.mjs
+          node scripts/check-agent-kit.mjs
