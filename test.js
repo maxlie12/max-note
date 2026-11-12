@@ -12,4 +12,38 @@ assert.deepEqual(ap.normalizeAppearance({theme:'dem',density:'compact'}),{theme:
 assert.deepEqual(ap.normalizeAppearance({theme:'unknown',density:'unsafe'}),{theme:'moc',density:'relaxed'});
 assert.deepEqual(ap.readStored({getItem(){throw Error('storage disabled')}}),{theme:'moc',density:'relaxed'});
 assert.deepEqual(ap.readStored({getItem(){return '{oops'}}),{theme:'moc',density:'relaxed'});
-console.log('Max Note: 21 core assertions passed (task, review, appearance)');
+// Daily Workflow regression: legacy backups, timezone, daily focus and done timestamps.
+const t1=n.makeTask({title:'Main task',project:'main'});
+const t2=n.makeTask({title:'Freelance task',project:'freelance'});
+t1.focus=true;t2.focus=true;
+const oldBackup={version:1,tasks:[t1,t2],reflections:{'2026-11-12':'Giữ lại note'}};
+const restored=n.parseBackup(JSON.stringify(oldBackup));
+assert.equal(restored.focusDate,'');
+assert.equal(n.rollFocusDay(restored,'2026-11-12'),true);
+assert.equal(restored.tasks.filter(t=>t.focus).length,2);
+assert.equal(n.rollFocusDay(restored,'2026-11-12'),false);
+assert.equal(n.rollFocusDay(restored,'2026-11-13'),true);
+assert.equal(restored.tasks.filter(t=>t.focus).length,0);
+assert.equal(restored.reflections['2026-11-12'],'Giữ lại note');
+assert.equal(restored.tasks.length,2);
+assert.throws(()=>n.parseBackup(JSON.stringify({...oldBackup,focusDate:'2026-02-30'})));
+assert.throws(()=>n.parseBackup(JSON.stringify({...oldBackup,tasks:[{...t1,completedAt:'no-date'}]})));
+const doneAt=new Date('2026-11-12T16:59:00.000Z'); // 23:59 Vietnam
+const nextDayAt=new Date('2026-11-12T17:01:00.000Z'); // 00:01 next day Vietnam
+n.changeStatus(t1,'done',doneAt);
+assert.equal(t1.completedAt,doneAt.toISOString());
+assert.equal(t1.focus,false);
+assert.equal(n.reviewSummary([t1,t2],'2026-11-12').doneToday,1);
+assert.equal(n.reviewSummary([t1,t2],'2026-11-13').doneToday,0);
+assert.match(n.reviewText([t1,t2],'2026-11-12'),/Main task/);
+n.changeStatus(t1,'doing',nextDayAt);
+assert.equal(t1.completedAt,'');
+assert.equal(n.reviewSummary([t1,t2],'2026-11-12').doneToday,0);
+n.changeStatus(t1,'done',nextDayAt);
+assert.equal(n.reviewSummary([t1,t2],'2026-11-13').doneToday,1);
+const legacyDone={...t1,completedAt:undefined};
+assert.equal(n.reviewSummary([legacyDone],'2026-11-13').doneToday,0);
+const withDates=n.parseBackup(JSON.stringify({version:1,tasks:[t1,t2],reflections:{},focusDate:'2026-11-13'}));
+assert.equal(withDates.focusDate,'2026-11-13');
+assert.equal(withDates.tasks[0].completedAt,nextDayAt.toISOString());
+console.log('Max Note: 21 core checks + Daily Workflow regression tests passed');
