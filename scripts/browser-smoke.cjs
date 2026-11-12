@@ -138,8 +138,44 @@ async function focusLimitScenario(browser) {
   console.log('PASS focus-limit: three selected, fourth rejected, reload retained');
   await context.close();
 }
+async function failedWriteScenario(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  page.on('dialog', dialog => dialog.accept());
+  await openWithRetry(page);
+  await addTask(page, 'Task that must survive failed writes');
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key === 'max-note-mvp-v1') throw new DOMException('Blocked', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  });
+  await page.locator('#other-tasks .task').first().getByRole('button', { name: 'Xong', exact: true }).click();
+  assert.equal(await page.locator('#other-tasks .task').count(), 1, 'failed Done write must roll back');
+  assert.match(await page.locator('#other-tasks .task-meta').first().textContent(), /Cần làm/);
+  await page.locator('#other-tasks .task').first().getByRole('button', { name: 'Xóa', exact: true }).click();
+  assert.equal(await page.locator('#other-tasks .task').count(), 1, 'failed delete must roll back');
+  await tab(page, 'inbox');
+  await page.locator('#title').fill('Unsaved new task');
+  await page.locator('#task-form button[type="submit"]').click();
+  assert.equal(await page.locator('#title').inputValue(), 'Unsaved new task', 'failed add stays retryable');
+  await tab(page, 'projects');
+  assert.equal(await page.locator('#project-tasks .task').count(), 1, 'failed add must roll back');
+  await tab(page, 'review');
+  await page.locator('#reflection').fill('Draft should not appear saved');
+  await page.locator('#save-reflection').click();
+  assert.equal(await page.locator('#reflection').inputValue(), 'Draft should not appear saved', 'failed reflection remains draft');
+  assert.match(await page.locator('#notice').textContent(), /hoàn tác/);
+  await page.reload();
+  await tab(page, 'review');
+  assert.equal(await page.locator('#reflection').inputValue(), '', 'failed reflection must not persist');
+  assert.equal(await page.locator('#project-tasks .task').count(), 1, 'original task must survive reload');
+  console.log('PASS write-failure: task status/delete/create/reflection rolled back; reload preserved original');
+  await context.close();
+}
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  try { await scenario(browser, 390); await scenario(browser, 320); await focusLimitScenario(browser); }
+  try { await scenario(browser, 390); await scenario(browser, 320); await focusLimitScenario(browser); await failedWriteScenario(browser); }
   finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
