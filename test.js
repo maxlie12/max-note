@@ -46,4 +46,15 @@ assert.equal(n.reviewSummary([legacyDone],'2026-11-13').doneToday,0);
 const withDates=n.parseBackup(JSON.stringify({version:1,tasks:[t1,t2],reflections:{},focusDate:'2026-11-13'}));
 assert.equal(withDates.focusDate,'2026-11-13');
 assert.equal(withDates.tasks[0].completedAt,nextDayAt.toISOString());
+// Backup import must persist before the UI replaces its in-memory store.
+const original=n.parseBackup(JSON.stringify({version:1,tasks:[t1],reflections:{'2026-11-12':'Original'}}));
+const incoming=n.parseBackup(JSON.stringify({version:1,tasks:[t2],reflections:{'2026-11-12':'Imported'}}));
+let savedPayload='';
+const committed=n.commitBackupImport(incoming,payload=>{savedPayload=payload});
+assert.deepEqual(committed,n.parseBackup(savedPayload));
+assert.equal(committed.tasks[0].id,t2.id);
+assert.equal(original.tasks[0].id,t1.id);
+assert.throws(()=>n.commitBackupImport(incoming,()=>{throw Error('QuotaExceededError')}),/QuotaExceededError/);
+assert.equal(original.reflections['2026-11-12'],'Original');
+assert.throws(()=>n.commitBackupImport({...incoming,tasks:[t2,t2]},()=>{throw Error('Should not write')}),/Trùng ID task/);
 console.log('Max Note: 21 core checks + Daily Workflow regression tests passed');
