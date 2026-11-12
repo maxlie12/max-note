@@ -19,3 +19,11 @@ In **Giao diện** pick one of five visual themes (Mộc xanh, Biển xanh, Nắ
 The **Review** tab now summarizes real current task counts (open, selected, overdue, blocked, done total) and shows an editable-via-reflection, **read-only prompt preview**. Only pressing **Sao chép bản review để hỏi AI** copies task information to the clipboard; no AI model is called and nothing is uploaded. Before pasting in any AI service, review the preview for private work/client details. The task storage schema is unchanged; no new dependency or server is used.
 
 Validation: `node --check logic.js`, `node --check appearance.js`, `node --check test.js`, `node test.js` (21 assertions), browser harness for theme switching/persistence and task/review reload at 390px and 320px. Real iOS/Safari/touch still requires device QA.
+
+## Daily Workflow P0 (2026-11-12)
+
+- Morning: pick up to three tasks on **Hôm nay**. Focus selection expires the next calendar day in Vietnam (the tasks do not disappear). If migrating from an older backup without `focusDate`, current focus is preserved on first use and dated today.
+- Evening: switch tasks to Done and open **Review**. “Xong hôm nay” counts only tasks explicitly marked Done since this update, using the optional `completedAt` timestamp in Vietnam's timezone. Older Done tasks without that timestamp are still included in the **total Done** count but not falsely attributed to today. Reopening a Done task removes its completedAt; marking Done again creates a new completion timestamp.
+- Backups remain version 1 and old files are accepted, with optional `focusDate` and `completedAt`. Existing task text, projects, due dates and reflections are unchanged. Same storage key (`max-note-mvp-v1`), domain and local-first behavior.
+- `node test.js` covers migration, day rollover, timezone boundary, Done/reopen transitions, summary accuracy and backup round trip.
+- Still no server, login, automatic AI execution, voice, or cross-device sync. Test on actual iPhone/Safari before considering P0 entirely signed off.
