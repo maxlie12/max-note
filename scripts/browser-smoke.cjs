@@ -93,14 +93,42 @@ async function scenario(browser, width) {
   await tab(page, 'review');
   assert.equal(await page.locator('#review-status').getByText('1 Xong hôm nay').count(), 1,
     'failed import must not destroy persisted tasks');
+  // Successful import and round-trip restore through the actual UI.
+  await page.locator('#import-file').setInputFiles({name: 'empty.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(replacement))});
+  await page.getByText('Đã nhập bản sao lưu.').waitFor();
+  assert.equal(await page.locator('#project-tasks .task').count(), 0);
+  await page.locator('#import-file').setInputFiles({name: 'restore.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported))});
+  await page.getByText('Đã nhập bản sao lưu.').waitFor();
+  assert.equal(await page.locator('#project-tasks .task').count(), 3, 'valid import must restore tasks');
+  assert.equal(await page.locator('#reflection').inputValue(), 'Bản nháp chưa lưu ' + label, 'reflection restored');
+  await page.reload();
+  await tab(page, 'review');
+  assert.equal(await page.locator('#project-tasks .task').count(), 3, 'restored tasks must survive reload');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   assert.equal(overflow, false, 'horizontal overflow at ' + label);
   assert.deepEqual(errors, [], 'browser JavaScript errors at ' + label);
   console.log('PASS ' + label + ': create/edit/focus/done/review/draft/reload/export/corrupt-import/quota-import');
   await context.close();
 }
+async function focusLimitScenario(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await openWithRetry(page);
+  for (let i = 1; i <= 4; i++) await addTask(page, 'Focus limit ' + i);
+  for (let i = 1; i <= 3; i++) {
+    await page.locator('#other-tasks .task').first().getByRole('button', { name: 'Chọn hôm nay' }).click();
+  }
+  assert.equal(await page.locator('#today-tasks .task').count(), 3);
+  await page.locator('#other-tasks .task').first().getByRole('button', { name: 'Chọn hôm nay' }).click();
+  await page.getByText('Chỉ nên chọn tối đa ba việc quan trọng mỗi ngày.').waitFor();
+  assert.equal(await page.locator('#today-tasks .task').count(), 3, 'fourth focus rejected');
+  await page.reload();
+  assert.equal(await page.locator('#today-tasks .task').count(), 3, 'same-day focus preserved');
+  console.log('PASS focus-limit: three selected, fourth rejected, reload retained');
+  await context.close();
+}
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  try { await scenario(browser, 390); await scenario(browser, 320); }
+  try { await scenario(browser, 390); await scenario(browser, 320); await focusLimitScenario(browser); }
   finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
