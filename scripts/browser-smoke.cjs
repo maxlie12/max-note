@@ -101,6 +101,7 @@ async function scenario(browser, width) {
   cancelNextImport = true;
   const cancelFile = {name: 'empty.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(replacement))};
   await page.locator('#import-file').setInputFiles(cancelFile);
+  await page.waitForFunction(() => document.querySelector('#import-file').value === '', null, { timeout: 5000 });
   assert.equal(await page.locator('#import-file').inputValue(), '', 'cancelled file input should reset');
   assert.equal(await page.locator('#project-tasks .task').count(), 3, 'cancel must preserve tasks');
   // Successful import and round-trip restore through the actual UI.
