@@ -28,7 +28,11 @@ async function scenario(browser, width) {
   const label = width + 'px';
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  page.on('dialog', dialog => dialog.accept());
+  let cancelNextImport = false;
+  page.on('dialog', dialog => {
+    if (cancelNextImport) { cancelNextImport = false; return dialog.dismiss(); }
+    return dialog.accept();
+  });
   await openWithRetry(page);
   await addTask(page, 'Việc chính ' + label);
   await addTask(page, 'Việc freelance ' + label, 'freelance');
@@ -93,6 +97,13 @@ async function scenario(browser, width) {
   await tab(page, 'review');
   assert.equal(await page.locator('#review-status').getByText('1 Xong hôm nay').count(), 1,
     'failed import must not destroy persisted tasks');
+  // Cancel an import, then select the exact same file: the file input must reset.
+  cancelNextImport = true;
+  const cancelFile = {name: 'empty.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(replacement))};
+  await page.locator('#import-file').setInputFiles(cancelFile);
+  await page.waitForFunction(() => document.querySelector('#import-file').value === '', null, { timeout: 5000 });
+  assert.equal(await page.locator('#import-file').inputValue(), '', 'cancelled file input should reset');
+  assert.equal(await page.locator('#project-tasks .task').count(), 3, 'cancel must preserve tasks');
   // Successful import and round-trip restore through the actual UI.
   await page.locator('#import-file').setInputFiles({name: 'empty.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(replacement))});
   await page.getByText('Đã nhập bản sao lưu.').waitFor();
