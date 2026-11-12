@@ -11,10 +11,11 @@ Tests: `node test.js` (core checks). Static JS syntax checked with `node --check
 Publishing: this directory is prepared for a dedicated GitHub repository, preferably **private** because it documents a personal workflow. GitHub Actions runs syntax checks and 10 core tests on each push or PR. Deploy the repository as a static Vercel project (framework: Other; root: repository root), or open `index.html` locally. The existing `max-note-daily.vercel.app` site was initially deployed separately, not yet linked to GitHub; linking or redeploying must be verified after the repository is created.
 
 Roadmap (not implemented): secure authenticated cross-device sync and optional AI suggestions based on real task data. Speech recognition and Siri Shortcut are later considerations.
-## Live deployment
 
-- App: https://max-note-daily.vercel.app
-- Source: https://github.com/maxlie12/max-note (branch `main`)
-- Vercel project: `max-note-daily`; Git integration linked to this repository.
-- The app remains **local-first**: tasks live in browser storage for the exact domain and device. This is **not** cross-device sync, and rule-based suggestions are **not** model-based AI review. Export JSON before changing browser or domain.
-- This documentation-only commit is intended to verify the GitHub → Vercel automatic deployment trigger without changing the running app.
+## Themes and end-of-day review
+
+In **Giao diện** pick one of five visual themes (Mộc xanh, Biển xanh, Nắng ấm, Tím nhẹ, Đêm sâu) and either Thoáng or Gọn density. Preferences are kept in a **separate browser-only key** `max-note-appearance-v1` and never modify `max-note-mvp-v1` task data. Theme links like `/?theme=dem&density=compact` apply a known preset, then remove the query to avoid reverting future manual choices.
+
+The **Review** tab now summarizes real current task counts (open, selected, overdue, blocked, done total) and shows an editable-via-reflection, **read-only prompt preview**. Only pressing **Sao chép bản review để hỏi AI** copies task information to the clipboard; no AI model is called and nothing is uploaded. Before pasting in any AI service, review the preview for private work/client details. The task storage schema is unchanged; no new dependency or server is used.
+
+Validation: `node --check logic.js`, `node --check appearance.js`, `node --check test.js`, `node test.js` (21 assertions), browser harness for theme switching/persistence and task/review reload at 390px and 320px. Real iOS/Safari/touch still requires device QA.

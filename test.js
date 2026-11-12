@@ -1,1 +1,15 @@
-const assert=require('node:assert/strict');require('./logic.js');const n=globalThis.MaxNote;let a=n.makeTask({title:' Sửa bug ',project:'main',priority:1,due:'2026-11-10'});assert.equal(a.title,'Sửa bug');assert.throws(()=>n.makeTask({title:'',project:'main'}));assert.throws(()=>n.makeTask({title:'x',due:'2026-02-30'}));const b=n.makeTask({title:'Atlas',project:'atlas',priority:2});assert.equal(n.suggest([b,a],'2026-11-11')[0].id,a.id);a.status='done';assert.equal(n.suggest([b,a],'2026-11-11')[0].id,b.id);const backup={version:1,tasks:[a,b],reflections:{'2026-11-11':'One thing'}};assert.equal(n.parseBackup(JSON.stringify(backup)).tasks.length,2);assert.throws(()=>n.parseBackup(JSON.stringify({...backup,tasks:[a,a]})));assert.deepEqual(n.load('{broken'),n.fresh());assert.match(n.reviewText([b],'2026-11-11'),/Chỉ gợi ý/);assert.equal(n.today(new Date('2026-11-10T18:00:00Z')),'2026-11-11');console.log('Max Note core tests: 10 checks passed');
+const assert=require('node:assert/strict');require('./logic.js');const n=globalThis.MaxNote;let a=n.makeTask({title:' Sửa bug ',project:'main',priority:1,due:'2026-11-10'});assert.equal(a.title,'Sửa bug');assert.throws(()=>n.makeTask({title:'',project:'main'}));assert.throws(()=>n.makeTask({title:'x',due:'2026-02-30'}));const b=n.makeTask({title:'Atlas',project:'atlas',priority:2});assert.equal(n.suggest([b,a],'2026-11-11')[0].id,a.id);a.status='done';assert.equal(n.suggest([b,a],'2026-11-11')[0].id,b.id);const backup={version:1,tasks:[a,b],reflections:{'2026-11-11':'One thing'}};assert.equal(n.parseBackup(JSON.stringify(backup)).tasks.length,2);assert.throws(()=>n.parseBackup(JSON.stringify({...backup,tasks:[a,a]})));assert.deepEqual(n.load('{broken'),n.fresh());assert.match(n.reviewText([b],'2026-11-11'),/Chỉ gợi ý/);assert.equal(n.today(new Date('2026-11-10T18:00:00Z')),'2026-11-11');const summary=n.reviewSummary([a,b],'2026-11-11');
+assert.equal(summary.active,1);
+assert.equal(summary.done,1);
+assert.equal(summary.focus,0);
+assert.equal(summary.blocked,0);
+assert.equal(summary.overdue,0);
+assert.match(n.reviewText([b],'2026-11-11','Việc học ngày mai'),/Việc học ngày mai/);
+assert.match(n.reviewText([b],'2026-11-11'),/GỢI Ý THEO QUY TẮC/);
+require('./appearance.js');
+const ap=globalThis.MaxNoteAppearance;
+assert.deepEqual(ap.normalizeAppearance({theme:'dem',density:'compact'}),{theme:'dem',density:'compact'});
+assert.deepEqual(ap.normalizeAppearance({theme:'unknown',density:'unsafe'}),{theme:'moc',density:'relaxed'});
+assert.deepEqual(ap.readStored({getItem(){throw Error('storage disabled')}}),{theme:'moc',density:'relaxed'});
+assert.deepEqual(ap.readStored({getItem(){return '{oops'}}),{theme:'moc',density:'relaxed'});
+console.log('Max Note: 21 core assertions passed (task, review, appearance)');

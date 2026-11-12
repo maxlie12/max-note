@@ -20,5 +20,6 @@ jobs:
       - name: Syntax and logic checks
         run: |
           node --check logic.js
+          node --check appearance.js
           node --check test.js
           node test.js
